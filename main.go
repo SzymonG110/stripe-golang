@@ -126,5 +126,5 @@ func main() {
 		c.JSON(http.StatusOK, gin.H{"received": true})
 	})
 
-	r.Run(":8080")
+	r.Run(":"+os.Getenv("API_PORT"))
 }
