@@ -2,8 +2,10 @@ package main
 
 import (
 	"github.com/stripe/stripe-go/v78"
+	"github.com/stripe/stripe-go/v78/checkout/session"
 	"github.com/stripe/stripe-go/v78/price"
 	"github.com/stripe/stripe-go/v78/product"
+	"os"
 )
 
 type Product struct {
@@ -19,6 +21,11 @@ type Price struct {
 	ID       string          `json:"id"`
 	Price    float64         `json:"price"`
 	Currency stripe.Currency `json:"currency"`
+}
+
+type Checkout struct {
+	ID  string `json:"id"`
+	URL string `json:"url"`
 }
 
 func GetProducts() []Product {
@@ -80,5 +87,37 @@ func GetProductPrice(priceID string) (Price, error) {
 		ID:       priceData.ID,
 		Price:    float64(priceData.UnitAmount) / 100,
 		Currency: priceData.Currency,
+	}, nil
+}
+
+func CreateCheckoutSession(productID string, priceID string, nickname string) (Checkout, error) {
+	sessionParams := &stripe.CheckoutSessionParams{
+		PaymentMethodTypes: stripe.StringSlice([]string{
+			"card",
+			"blik",
+		}),
+		LineItems: []*stripe.CheckoutSessionLineItemParams{
+			{
+				Price:    stripe.String(priceID),
+				Quantity: stripe.Int64(1),
+			},
+		},
+		Mode:       stripe.String(string(stripe.CheckoutSessionModePayment)),
+		SuccessURL: stripe.String(os.Getenv("CHECKOUT_SUCCESS_URL") + "?nickname=" + nickname),
+		CancelURL:  stripe.String(os.Getenv("CHECKOUT_CANCEL_URL")),
+		Metadata: map[string]string{
+			"nickname":   nickname,
+			"product_id": productID,
+		},
+	}
+
+	checkoutSession, err := session.New(sessionParams)
+	if err != nil {
+		return Checkout{}, err
+	}
+
+	return Checkout{
+		ID:  checkoutSession.ID,
+		URL: checkoutSession.URL,
 	}, nil
 }

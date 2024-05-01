@@ -5,8 +5,6 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/joho/godotenv"
 	stripe "github.com/stripe/stripe-go/v78"
-	"github.com/stripe/stripe-go/v78/checkout/session"
-	"github.com/stripe/stripe-go/v78/product"
 	"github.com/stripe/stripe-go/v78/webhook"
 	"log"
 	"net/http"
@@ -32,7 +30,7 @@ func main() {
 	r.POST("/create-checkout-session", func(c *gin.Context) {
 		type RequestBody struct {
 			ProductID string `json:"product_id"`
-			Nick      string `json:"nick"`
+			Nickname  string `json:"nickname"`
 		}
 
 		var reqBody RequestBody
@@ -47,27 +45,7 @@ func main() {
 			return
 		}
 
-		sessionParams := &stripe.CheckoutSessionParams{
-			PaymentMethodTypes: stripe.StringSlice([]string{
-				"card",
-				"blik",
-			}),
-			LineItems: []*stripe.CheckoutSessionLineItemParams{
-				{
-					Price:    stripe.String(productData.PriceID),
-					Quantity: stripe.Int64(1),
-				},
-			},
-			Mode:       stripe.String(string(stripe.CheckoutSessionModePayment)),
-			SuccessURL: stripe.String(os.Getenv("CHECKOUT_SUCCESS_URL") + "?nickname=" + reqBody.Nick),
-			CancelURL:  stripe.String(os.Getenv("CHECKOUT_CANCEL_URL")),
-			Metadata: map[string]string{
-				"nick":       reqBody.Nick,
-				"product_id": reqBody.ProductID,
-			},
-		}
-
-		session, err := session.New(sessionParams)
+		session, err := CreateCheckoutSession(reqBody.ProductID, productData.PriceID, reqBody.Nickname)
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 			return
@@ -105,15 +83,14 @@ func main() {
 				return
 			}
 
-			nickname := checkoutSession.Metadata["nick"]
+			nickname := checkoutSession.Metadata["nickname"]
 			productId := checkoutSession.Metadata["product_id"]
 			if nickname == "" || productId == "" {
 				c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{"error": "nickname or product_id not provided"})
 				return
 			}
 
-			productData := &stripe.ProductParams{}
-			result, err := product.Get(productId, productData)
+			result, err := GetProduct(productId)
 			if err != nil {
 				c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{"error": "Incorrect product_id"})
 				return
@@ -126,5 +103,5 @@ func main() {
 		c.JSON(http.StatusOK, gin.H{"received": true})
 	})
 
-	r.Run(":"+os.Getenv("API_PORT"))
+	r.Run(":" + os.Getenv("API_PORT"))
 }
