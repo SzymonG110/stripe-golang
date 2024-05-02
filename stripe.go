@@ -36,6 +36,10 @@ func GetProducts() []Product {
 	products := []Product{}
 	for iter.Next() {
 		productData := iter.Product()
+		if productData.DefaultPrice == nil {
+			continue
+		}
+
 		priceData, err := GetProductPrice(productData.DefaultPrice.ID)
 		if err != nil {
 			continue

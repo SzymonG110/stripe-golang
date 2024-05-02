@@ -30,8 +30,19 @@ func main() {
 	r := gin.Default()
 
 	r.GET("/products", func(c *gin.Context) {
-		products := GetProducts()
-		c.JSON(http.StatusOK, products)
+		productID := c.Query("product_id")
+		if productID == "" {
+			products := GetProducts()
+			c.JSON(http.StatusOK, gin.H{"products": products})
+			return
+		}
+
+		product, err := GetProduct(productID)
+		if err != nil {
+			c.JSON(http.StatusNotFound, gin.H{"error": "Product not found"})
+			return
+		}
+		c.JSON(http.StatusOK, gin.H{"product": product})
 	})
 
 	r.POST("/create-checkout-session", func(c *gin.Context) {
