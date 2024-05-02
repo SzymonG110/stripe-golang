@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/gin-gonic/gin"
+	"github.com/itsjamie/gin-cors"
 	"github.com/joho/godotenv"
 	stripe "github.com/stripe/stripe-go/v78"
 	"github.com/stripe/stripe-go/v78/webhook"
@@ -28,6 +29,11 @@ func main() {
 
 	stripe.Key = os.Getenv("STRIPE_KEY")
 	r := gin.Default()
+	r.Use(cors.Middleware(cors.Config{
+		Origins: "*",
+		Methods: "GET, POST",
+		MaxAge:  50 * time.Second,
+	}))
 
 	r.GET("/products", func(c *gin.Context) {
 		productID := c.Query("product_id")

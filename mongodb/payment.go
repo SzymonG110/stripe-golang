@@ -9,10 +9,10 @@ import (
 )
 
 type DBPayment struct {
-	Email       string    `bson:"email,omitempty"`
-	Nickname    string    `bson:"nickname,omitempty"`
-	ProductName string    `bson:"productName,omitempty"`
-	Date        time.Time `bson:"date,omitempty"`
+	Email       string    `bson:"email,omitempty" json:"email,omitempty"`
+	Nickname    string    `bson:"nickname,omitempty" json:"nickname,omitempty"`
+	ProductName string    `bson:"productName,omitempty" json:"product_name,omitempty"`
+	Date        time.Time `bson:"date,omitempty" json:"date,omitempty"`
 }
 
 func InsertPayment(collection *mongo.Collection, item DBPayment) error {
