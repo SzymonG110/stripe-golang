@@ -2,22 +2,29 @@ package main
 
 import (
 	"encoding/json"
+	"fmt"
 	"github.com/gin-gonic/gin"
 	"github.com/joho/godotenv"
 	stripe "github.com/stripe/stripe-go/v78"
 	"github.com/stripe/stripe-go/v78/webhook"
+	"gornikowski.pl/stripe/mongodb"
 	"log"
 	"net/http"
 	"os"
+	"time"
 )
 
 func main() {
 	// fmt.Printf("%+v\n", JSON)
 	// ^^ print json XD
-	err := godotenv.Load()
-	if err != nil {
+	if err := godotenv.Load(); err != nil {
 		log.Fatal("Error loading .env file")
 	}
+
+	if err := mongodb.ConnectDB(os.Getenv("MONGODB_URI"), os.Getenv("MONGODB_DATABASE")); err != nil {
+		log.Fatal(err)
+	}
+	paymentCollection := mongodb.GetCollection("payment")
 
 	stripe.Key = os.Getenv("STRIPE_KEY")
 	r := gin.Default()
@@ -90,17 +97,37 @@ func main() {
 				return
 			}
 
-			result, err := GetProduct(productId)
+			product, err := GetProduct(productId)
 			if err != nil {
 				c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{"error": "Incorrect product_id"})
 				return
 			}
 
-			SendWebhook(nickname + " kupił " + result.Name)
+			if err := mongodb.InsertPayment(paymentCollection, mongodb.DBPayment{
+				Email:       checkoutSession.CustomerDetails.Email,
+				Nickname:    nickname,
+				ProductName: product.Name,
+				Date:        time.Now(),
+			}); err != nil {
+				fmt.Println("[WEBHOOK]: Cannot insert payment to DB; " + err.Error())
+			}
 
+			if _, err := SendWebhook(nickname + " kupił " + product.Name); err != nil {
+				fmt.Println("[WEBHOOK]: Cannot send webhook message; " + err.Error())
+			}
 		}
 
 		c.JSON(http.StatusOK, gin.H{"received": true})
+	})
+
+	r.GET("/last", func(c *gin.Context) {
+		lastPayments, err := mongodb.GetLast(paymentCollection, 5)
+		if err != nil {
+			c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{"error": "Failed to get last payments"})
+			return
+		}
+
+		c.JSON(http.StatusOK, gin.H{"last_payments": lastPayments})
 	})
 
 	r.Run(":" + os.Getenv("API_PORT"))
