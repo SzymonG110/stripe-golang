@@ -1,4 +1,4 @@
-module gornikowski.pl/stripe
+module github.com/SzymonG110/stripe-golang
 
 go 1.22.2
 
