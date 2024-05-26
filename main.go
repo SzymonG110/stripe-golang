@@ -8,7 +8,7 @@ import (
 	"github.com/joho/godotenv"
 	stripe "github.com/stripe/stripe-go/v78"
 	"github.com/stripe/stripe-go/v78/webhook"
-	"gornikowski.pl/stripe/mongodb"
+	"github.com/SzymonG110/stripe-golang/mongodb"
 	"log"
 	"net/http"
 	"os"
